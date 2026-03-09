@@ -130,6 +130,24 @@ def login(credentials: dict):
         "email": credentials["email"],
         "user_name": user["user_name"]
     }
+    
+
+@router.get("/profile/check")
+def check_profile(user_email: str):
+
+    profile = profiles_collection.find_one(
+        {"user_email": user_email},
+        {"_id": 0}
+    )
+
+    if not profile:
+        return {"exists": False}
+
+    # profile document exists but not completed
+    if profile.get("profile") is None:
+        return {"exists": False}
+
+    return {"exists": True}
 
 
 # -----------------------------
@@ -164,15 +182,7 @@ def next(user_email: str = Query(...), answer: str = Query(...)):
 @router.post("/career/recommend")
 def recommend(user_email: str = Query(...)):
     try:
-        profile_document = profiles_collection.find_one(
-            {"user_email": user_email},
-            {"_id": 0}
-        )
-
-        if not profile_document:
-            raise HTTPException(status_code=404, detail="Profile not found")
-
-        return recommend_careers(profile_document)
+        return recommend_careers(user_email)
 
     except ResourceExhausted:
         raise HTTPException(

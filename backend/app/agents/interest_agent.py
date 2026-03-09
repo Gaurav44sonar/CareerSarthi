@@ -449,8 +449,15 @@ def start_session(user_email: str, user_name: str):
     existing_profile = profiles_collection.find_one({"user_email": user_email})
 
     if existing_profile:
+        # If profile is complete, return message
+        if existing_profile.get("profile"):
+            return {
+                "message": "Profile already exists for this user",
+                "complete": True
+            }
+        # If profile is incomplete, return the last question
         return {
-            "message": "Profile already exists for this user"
+            "question": existing_profile["last_question"]
         }
 
     profile_doc = {
