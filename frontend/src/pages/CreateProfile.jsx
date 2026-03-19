@@ -197,7 +197,7 @@ function CreateProfile() {
         {profileComplete ? (
           <div className="border-t p-4 flex justify-center">
             <button
-              onClick={() => navigate("/career-recommendations")}
+              onClick={() => navigate("/careers")}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg"
             >
               See Career Recommendations

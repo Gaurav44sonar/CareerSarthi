@@ -88,7 +88,7 @@ from app.agents.skill_gap_agent import analyze_skill_gap
 from app.agents.roadmap_agent import generate_roadmap, store_roadmap
 from app.agents.chat_agent import chat_with_mentor
 
-from app.database.mongo import profiles_collection, users_collection
+from app.database.mongo import profiles_collection, users_collection, skill_gap_collection
 
 router = APIRouter()
 
@@ -199,10 +199,42 @@ def recommend(user_email: str = Query(...)):
 # SKILL GAP ANALYSIS
 # -----------------------------
 
+# @router.post("/career/select")
+# def select_career(user_email: str = Query(...), career_name: str = Query(...)):
+#     try:
+#         return analyze_skill_gap(user_email, career_name)
+
+#     except ResourceExhausted:
+#         raise HTTPException(
+#             status_code=429,
+#             detail="Gemini API quota exceeded. Please wait a minute and try again."
+#         )
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/career/select")
 def select_career(user_email: str = Query(...), career_name: str = Query(...)):
+
     try:
-        return analyze_skill_gap(user_email, career_name)
+        # 1. Check if already exists
+        existing = skill_gap_collection.find_one({
+            "user_email": user_email,
+            "career": career_name
+        }, {"_id": 0})
+
+        if existing:
+            return {
+                "message": "Skill gap fetched from database",
+                "analysis": existing["analysis"]
+            }
+
+        # 2. Generate new
+        result = analyze_skill_gap(user_email, career_name)
+
+        return {
+            "message": "Skill gap generated",
+            "analysis": result
+        }
 
     except ResourceExhausted:
         raise HTTPException(

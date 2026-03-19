@@ -109,6 +109,32 @@ function Dashboard() {
       )}
 
 
+      {/* Quick Actions */}
+
+      <div className="bg-white p-8 rounded-2xl shadow-lg mb-10 flex justify-between items-center">
+
+        <div>
+
+          <h2 className="text-xl font-semibold text-gray-800">
+            View Career Recommendations
+          </h2>
+
+          <p className="text-gray-500 mt-1">
+            Open your AI-recommended career options and explore skill gaps.
+          </p>
+
+        </div>
+
+        <button
+          onClick={() => navigate("/careers")}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl shadow"
+        >
+          Open Careers
+        </button>
+
+      </div>
+
+
       {/* Progress Section */}
 
       <div className="grid grid-cols-4 gap-6 mb-12">
