@@ -133,15 +133,15 @@ def extract_json(text):
 # ----------------------------------
 # Generate Roadmap
 # ----------------------------------
-def generate_roadmap(user_email: str):
+def generate_roadmap(user_email: str, career_name: str):
+    
 
     profile_doc = profiles_collection.find_one(
-        {"user_email": user_email},
-        {"_id": 0}
+        {"user_email": user_email}, {"_id": 0}
     )
 
     skill_gap_doc = skill_gap_collection.find_one(
-        {"user_email": user_email},
+        {"user_email": user_email, "career": career_name},
         {"_id": 0}
     )
 
@@ -149,7 +149,22 @@ def generate_roadmap(user_email: str):
         return {"error": "User profile not found"}
 
     if not skill_gap_doc:
-        return {"error": "Skill gap report not found"}
+        return {"error": "Skill gap not found for this career"}
+
+    # profile_doc = profiles_collection.find_one(
+    #     {"user_email": user_email}, {"_id": 0}
+    # )
+
+    # skill_gap_doc = skill_gap_collection.find_one(
+    #     {"user_email": user_email, "career": career_name},
+    #     {"_id": 0}
+    # )
+
+    # if not profile_doc:
+    #     return {"error": "User profile not found"}
+
+    # if not skill_gap_doc:
+    #     return {"error": "Skill gap not found for this career"}
 
     career = skill_gap_doc["career"]
     skill_gap = skill_gap_doc["analysis"]
@@ -201,14 +216,15 @@ Return STRICT JSON:
 # ----------------------------------
 # Store Roadmap
 # ----------------------------------
-def store_roadmap(user_email: str, roadmap_data):
+def store_roadmap(user_email: str, career_name: str, roadmap_data):
 
     roadmap_collection.insert_one({
         "user_email": user_email,
+        "career": career_name,
         "roadmap": roadmap_data,
         "created_at": datetime.utcnow()
     })
 
-    return {
-        "message": "Roadmap stored successfully"
-    }
+    return {"message": "Stored"}
+
+   

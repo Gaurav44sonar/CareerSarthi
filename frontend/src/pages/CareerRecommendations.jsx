@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import API from "../services/api";
+import { useNavigate } from "react-router-dom";
+
 
 function CareerRecommendations() {
 
@@ -10,6 +12,8 @@ function CareerRecommendations() {
   const [skillGapData, setSkillGapData] = useState(null);
   const [loadingGap, setLoadingGap] = useState(false);
   const [gapError, setGapError] = useState("");
+
+  const navigate = useNavigate();
 
   const userEmail = localStorage.getItem("user_email");
 
@@ -61,9 +65,17 @@ function CareerRecommendations() {
     setLoadingGap(false);
   };
 
+  // const pursueCareer = (careerName) => {
+  //   handleGapAnalysis(careerName);
+  // };
+
   const pursueCareer = (careerName) => {
-    handleGapAnalysis(careerName);
-  };
+
+  navigate("/roadmap", {
+    state: { career: careerName }
+  });
+
+};
 
   const normalizedSkillGapData = skillGapData
     ? {

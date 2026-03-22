@@ -1,84 +1,3 @@
-# from fastapi import APIRouter, Query, HTTPException
-# from app.agents.interest_agent import start_session, process_answer
-# from app.agents.career_agent import recommend_careers
-# from app.database.mongo import profiles_collection
-# from app.agents.skill_gap_agent import analyze_skill_gap
-# from google.api_core.exceptions import ResourceExhausted
-# from app.agents.roadmap_agent import generate_roadmap, store_roadmap
-# from app.agents.chat_agent import chat_with_mentor
-
-# router = APIRouter()
-
-
-
-
-# @router.post("/interest/start")
-# def start(user_name: str = Query(...)):
-#     try:
-#         return start_session(user_name)
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
-# @router.post("/interest/next")
-# def next(session_id: str = Query(...), answer: str = Query(...)):
-#     try:
-#         return process_answer(session_id, answer)
-#     except ResourceExhausted as e:
-#         raise HTTPException(status_code=429, detail="Gemini API quota exceeded. Please wait a minute and try again.")
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
-# @router.post("/career/recommend")
-# def recommend(session_id: str = Query(...)):
-#     try:
-#         profile_document = profiles_collection.find_one(
-#             {"session_id": session_id},
-#             {"_id": 0}
-#         )
-
-#         if not profile_document:
-#             raise HTTPException(status_code=404, detail="Profile not found")
-
-#         return recommend_careers(profile_document)
-#     except ResourceExhausted as e:
-#         raise HTTPException(status_code=429, detail="Gemini API quota exceeded. Please wait a minute and try again.")
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
-# @router.post("/career/select")
-# def select_career(session_id: str = Query(...), career_name: str = Query(...)):
-#     try:
-#         result = analyze_skill_gap(session_id, career_name)
-#         return result
-#     except ResourceExhausted as e:
-#         raise HTTPException(status_code=429, detail="Gemini API quota exceeded. Please wait a minute and try again.")
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-    
-# @router.get("/roadmap/generate")
-# def generate(session_id: str):
-
-#     roadmap = generate_roadmap(session_id)
-
-#     return roadmap
-
-# @router.post("/roadmap/store")
-# def store(session_id: str, roadmap: dict):
-
-#     result = store_roadmap(session_id, roadmap)
-
-#     return result
-
-# @router.post("/mentor/chat")
-# def mentor_chat(session_id: str, message: str):
-
-#     return chat_with_mentor(session_id, message)
-
 from fastapi import APIRouter, Query, HTTPException
 from google.api_core.exceptions import ResourceExhausted
 
@@ -87,15 +6,21 @@ from app.agents.career_agent import recommend_careers
 from app.agents.skill_gap_agent import analyze_skill_gap
 from app.agents.roadmap_agent import generate_roadmap, store_roadmap
 from app.agents.chat_agent import chat_with_mentor
+from app.database.mongo import roadmap_collection
+from app.database.mongo import progress_collection
 
-from app.database.mongo import profiles_collection, users_collection, skill_gap_collection
+from app.database.mongo import (
+    profiles_collection,
+    users_collection,
+    skill_gap_collection,
+    roadmap_collection
+)
 
 router = APIRouter()
 
-
-# -----------------------------
+# =============================
 # AUTH ROUTES
-# -----------------------------
+# =============================
 
 @router.post("/auth/register")
 def register(user: dict):
@@ -130,7 +55,7 @@ def login(credentials: dict):
         "email": credentials["email"],
         "user_name": user["user_name"]
     }
-    
+
 
 @router.get("/profile/check")
 def check_profile(user_email: str):
@@ -140,19 +65,15 @@ def check_profile(user_email: str):
         {"_id": 0}
     )
 
-    if not profile:
-        return {"exists": False}
-
-    # profile document exists but not completed
-    if profile.get("profile") is None:
+    if not profile or profile.get("profile") is None:
         return {"exists": False}
 
     return {"exists": True}
 
 
-# -----------------------------
+# =============================
 # INTEREST AGENT
-# -----------------------------
+# =============================
 
 @router.post("/interest/start")
 def start(user_email: str = Query(...), user_name: str = Query(...)):
@@ -169,66 +90,50 @@ def next(user_email: str = Query(...), answer: str = Query(...)):
     except ResourceExhausted:
         raise HTTPException(
             status_code=429,
-            detail="Gemini API quota exceeded. Please wait a minute and try again."
+            detail="Gemini API quota exceeded. Please wait."
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# -----------------------------
+# =============================
 # CAREER RECOMMENDATION
-# -----------------------------
+# =============================
 
 @router.post("/career/recommend")
 def recommend(user_email: str = Query(...)):
     try:
         return recommend_careers(user_email)
-
     except ResourceExhausted:
-        raise HTTPException(
-            status_code=429,
-            detail="Gemini API quota exceeded. Please wait a minute and try again."
-        )
-    except HTTPException:
-        raise
+        raise HTTPException(status_code=429, detail="API quota exceeded")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# -----------------------------
+# =============================
 # SKILL GAP ANALYSIS
-# -----------------------------
-
-# @router.post("/career/select")
-# def select_career(user_email: str = Query(...), career_name: str = Query(...)):
-#     try:
-#         return analyze_skill_gap(user_email, career_name)
-
-#     except ResourceExhausted:
-#         raise HTTPException(
-#             status_code=429,
-#             detail="Gemini API quota exceeded. Please wait a minute and try again."
-#         )
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
+# =============================
 
 @router.post("/career/select")
 def select_career(user_email: str = Query(...), career_name: str = Query(...)):
 
     try:
-        # 1. Check if already exists
-        existing = skill_gap_collection.find_one({
-            "user_email": user_email,
-            "career": career_name
-        }, {"_id": 0})
+        # 🔍 Check existing
+        existing = skill_gap_collection.find_one(
+            {
+                "user_email": user_email,
+                "career": career_name
+            },
+            {"_id": 0}
+        )
 
         if existing:
             return {
-                "message": "Skill gap fetched from database",
+                "message": "Skill gap fetched from DB",
                 "analysis": existing["analysis"]
             }
 
-        # 2. Generate new
+        # 🚀 Generate new
         result = analyze_skill_gap(user_email, career_name)
 
         return {
@@ -237,31 +142,149 @@ def select_career(user_email: str = Query(...), career_name: str = Query(...)):
         }
 
     except ResourceExhausted:
-        raise HTTPException(
-            status_code=429,
-            detail="Gemini API quota exceeded. Please wait a minute and try again."
-        )
+        raise HTTPException(status_code=429, detail="API quota exceeded")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =============================
+# ROADMAP AGENT (FIXED)
+# =============================
+
+# @router.get("/roadmap/generate")
+# def generate_roadmap_route(
+#     user_email: str = Query(...),
+#     career_name: str = Query(...)
+# ):
+
+#     try:
+#         # 🔍 1. Check DB first
+#         existing = roadmap_collection.find_one(
+#             {
+#                 "user_email": user_email,
+#                 "career": career_name
+#             },
+#             {"_id": 0}
+#         )
+
+#         if existing:
+#             return {
+#                 "message": "Roadmap fetched from DB",
+#                 "roadmap": existing["roadmap"]
+#             }
+
+#         # 🚀 2. Generate roadmap
+#         roadmap = generate_roadmap(user_email, career_name)
+
+#         if "error" in roadmap:
+#             raise HTTPException(status_code=400, detail=roadmap["error"])
+
+#         # 💾 3. Store roadmap
+#         store_roadmap(user_email, career_name, roadmap)
+
+#         return {
+#             "message": "Roadmap generated",
+#             "roadmap": roadmap
+#         }
+
+#     except ResourceExhausted:
+#         raise HTTPException(status_code=429, detail="API quota exceeded")
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
 # -----------------------------
-# ROADMAP AGENT
+# ROADMAP AGENT (FIXED)
 # -----------------------------
+
+
 
 @router.get("/roadmap/generate")
-def generate(user_email: str):
-    return generate_roadmap(user_email)
+def generate(user_email: str = Query(...), career_name: str = Query(...)):
+
+    try:
+        # 🔍 1. Check if roadmap already exists
+        existing = roadmap_collection.find_one(
+            {
+                "user_email": user_email,
+                "career": career_name
+            },
+            {"_id": 0}
+        )
+
+        if existing:
+            return {
+                "message": "Roadmap fetched from database",
+                "roadmap": existing["roadmap"]
+            }
+
+        # 🚀 2. Generate new roadmap
+        roadmap = generate_roadmap(user_email, career_name)
+
+        if "error" in roadmap:
+            raise HTTPException(status_code=400, detail=roadmap["error"])
+
+        # 💾 3. Store roadmap
+        store_roadmap(user_email, career_name, roadmap)
+
+        return {
+            "message": "Roadmap generated successfully",
+            "roadmap": roadmap
+        }
+
+    except ResourceExhausted:
+        raise HTTPException(
+            status_code=429,
+            detail="Gemini API quota exceeded. Please wait."
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 
 
-@router.post("/roadmap/store")
-def store(user_email: str, roadmap: dict):
-    return store_roadmap(user_email, roadmap)
+# =============================
+# ROADMAP PROGRESS
+# =============================
 
 
-# -----------------------------
-# AI CAREER MENTOR CHAT
-# -----------------------------
+@router.post("/roadmap/progress/update")
+def update_progress(user_email: str, career_name: str, progress: dict):
+
+    progress_collection.update_one(
+        {
+            "user_email": user_email,
+            "career": career_name
+        },
+        {
+            "$set": {
+                "progress": progress
+            }
+        },
+        upsert=True
+    )
+
+    return {"message": "Progress saved"}
+
+
+@router.get("/roadmap/progress/get")
+def get_progress(user_email: str, career_name: str):
+
+    data = progress_collection.find_one(
+        {
+            "user_email": user_email,
+            "career": career_name
+        },
+        {"_id": 0}
+    )
+
+    if not data:
+        return {"progress": {}}
+
+    return {"progress": data["progress"]}
+
+
+# =============================
+# AI MENTOR CHAT
+# =============================
 
 @router.post("/mentor/chat")
 def mentor_chat(user_email: str, message: str):

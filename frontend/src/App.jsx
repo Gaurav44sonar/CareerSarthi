@@ -6,6 +6,9 @@ import Dashboard from "./pages/Dashboard";
 import CreateProfile from "./pages/CreateProfile";
 import CareerRecommendations from "./pages/CareerRecommendations";
 import SkillGap from "./pages/SkillGap";
+import Roadmap from "./pages/Roadmap";
+
+
 
 function App() {
   return (
@@ -23,6 +26,8 @@ function App() {
         <Route path="/create-profile" element={<CreateProfile />} />
         <Route path="/careers" element={<CareerRecommendations />} />
         <Route path="/skill-gap" element={<SkillGap />} />
+
+        <Route path="/roadmap" element={<Roadmap />} />
 
       </Routes>
     </Router>
