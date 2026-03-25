@@ -310,7 +310,8 @@
 
 from fastapi import APIRouter, Query, HTTPException
 from google.api_core.exceptions import ResourceExhausted
-
+from fastapi import UploadFile, File
+from fastapi.staticfiles import StaticFiles
 from app.agents.interest_agent import start_session, process_answer
 from app.agents.career_agent import recommend_careers
 from app.agents.skill_gap_agent import analyze_skill_gap
@@ -324,6 +325,7 @@ from app.database.mongo import (
     roadmap_collection,
     progress_collection
 )
+
 
 router = APIRouter()
 
@@ -383,14 +385,126 @@ def check_profile(user_email: str):
 
     return {"exists": True}
 
+# =============================
+# USER PROFILE
+# =============================
+
+@router.get("/user/profile")
+def get_profile(user_email: str):
+
+    print("🔍 Requested email:", user_email)  # DEBUG
+
+    user = users_collection.find_one({"email": user_email})
+
+    print("👤 DB user:", user)  # DEBUG
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "name": user.get("user_name", ""),
+        "email": user.get("email", ""),
+        "image": user.get("image", "")
+    }
+
+
+@router.get("/user/stats")
+def get_user_stats(user_email: str):
+
+    careers = roadmap_collection.count_documents({
+        "user_email": user_email
+    })
+
+    roadmaps = careers
+
+    skill_gaps = list(skill_gap_collection.find(
+        {"user_email": user_email}
+    ))
+
+    avg_match = 0
+    if skill_gaps:
+        avg_match = int(sum(
+            g["analysis"].get("skill_match_percentage", 0)
+            for g in skill_gaps
+        ) / len(skill_gaps))
+
+    # 🔥 fake streak (upgrade later)
+    streak = 5
+
+    return {
+        "careers": careers,
+        "roadmaps": roadmaps,
+        "avgMatch": avg_match,
+        "streak": streak
+    }
+    
+    
+@router.get("/user/skills")
+def get_user_skills(user_email: str):
+
+    records = skill_gap_collection.find(
+        {"user_email": user_email},
+        {"_id": 0, "analysis.skills_user_has": 1}
+    )
+
+    skills_set = set()
+
+    for r in records:
+        skills = r.get("analysis", {}).get("skills_user_has", [])
+        for s in skills:
+            skills_set.add(s)
+
+    return {
+        "skills": list(skills_set)
+    }
+
+# @router.post("/user/profile/update")
+# def update_profile(user_email: str, name: str = None):
+
+#     users_collection.update_one(
+#         {"email": user_email},
+#         {"$set": {"user_name": name}}
+#     )
+
+#     return {"message": "Profile updated"}
+
+@router.post("/user/profile/update")
+def update_profile(
+    user_email: str,
+    name: str = None,
+    file: UploadFile = File(None)
+):
+
+    update_data = {}
+
+    if name:
+        update_data["user_name"] = name
+
+    if file:
+        file_location = f"uploads/{user_email}.jpg"
+
+        with open(file_location, "wb") as f:
+            f.write(file.file.read())
+
+        update_data["image"] = file_location
+
+    users_collection.update_one(
+        {"email": user_email},
+        {"$set": update_data}
+    )
+
+    return {"message": "Profile updated successfully"}
+
 
 # =============================
 # INTEREST AGENT
 # =============================
 
 @router.post("/interest/start")
-def start(user_email: str = Query(...), user_name: str = Query(...)):
-    return start_session(user_email, user_name)
+def start(user_email: str = Query(...), user_name: str = Query(None)):
+    user = users_collection.find_one({"email": user_email}, {"_id": 0, "user_name": 1})
+    resolved_name = (user or {}).get("user_name") or user_name or "User"
+    return start_session(user_email, resolved_name)
 
 
 @router.post("/interest/next")
@@ -584,6 +698,64 @@ def get_user_careers(user_email: str):
 
     return {"careers": [c["career"] for c in careers]}
 
+
+# =============================
+# USER ACTIVITY HEATMAP (PRO)
+# =============================
+
+from datetime import datetime, timedelta
+from app.database.mongo import users_streak_collection
+
+@router.get("/user/activity")
+def get_user_activity(user_email: str):
+
+    today = datetime.utcnow()
+
+    # last 90 days
+    last_90_days = [
+        (today - timedelta(days=i)).strftime("%Y-%m-%d")
+        for i in range(90)
+    ]
+
+    # fetch activity
+    activity = users_streak_collection.find(
+        {"user_email": user_email},
+        {"_id": 0, "date": 1}
+    )
+
+    # count occurrences per day
+    activity_count = {}
+
+    for a in activity:
+        raw_date = a.get("date")
+
+        try:
+            if isinstance(raw_date, datetime):
+                key = raw_date.strftime("%Y-%m-%d")
+
+            elif isinstance(raw_date, str):
+                key = datetime.fromisoformat(
+                    raw_date.replace("Z", "+00:00")
+                ).strftime("%Y-%m-%d")
+
+            else:
+                continue
+
+            activity_count[key] = activity_count.get(key, 0) + 1
+
+        except Exception:
+            continue
+
+    # build response
+    result = []
+
+    for day in reversed(last_90_days):  # oldest → newest
+        result.append({
+            "date": day,
+            "count": activity_count.get(day, 0)
+        })
+
+    return {"activity": result}
 
 # =============================
 # AI MENTOR

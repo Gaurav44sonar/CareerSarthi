@@ -1,5 +1,5 @@
 
-
+import Navbar from "../components/Navbar";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
@@ -32,8 +32,7 @@ function CreateProfile() {
 
       const res = await API.post("/interest/start", null, {
         params: {
-          user_email: userEmail,
-          user_name: "User"
+          user_email: userEmail
         }
       });
 
@@ -122,6 +121,8 @@ function CreateProfile() {
   return (
 
     <div className="h-screen flex flex-col items-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-6">
+
+      <Navbar />
 
       {/* Progress Bar */}
 

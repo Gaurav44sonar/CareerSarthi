@@ -1,12 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.api_routes import router
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="Career AI System")
 
+
+
+
+
 # Allow React frontend
 origins = [
-    "http://localhost:5173"
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
 ]
 
 app.add_middleware(
@@ -19,6 +25,7 @@ app.add_middleware(
 
 app.include_router(router)
 
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
 def root():

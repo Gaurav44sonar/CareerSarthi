@@ -128,6 +128,7 @@
 
 // export default Roadmap;
 
+import Navbar from "../components/Navbar";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import API from "../services/api";
@@ -209,6 +210,8 @@ function Roadmap() {
   return (
 
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-10 text-gray-800">
+
+      <Navbar />
 
       {/* HEADER */}
       <h1 className="text-4xl font-bold text-center mb-8 text-gray-900">

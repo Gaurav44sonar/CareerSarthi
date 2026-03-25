@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import API from "../services/api";
 import { useNavigate } from "react-router-dom";
+import Navbar from "../components/Navbar";
 
 
 function CareerRecommendations() {
@@ -88,6 +89,8 @@ function CareerRecommendations() {
   return (
 
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-10">
+
+      <Navbar />
 
       {/* 🔥 Title */}
       <h1 className="text-4xl font-bold text-gray-900 mb-10">

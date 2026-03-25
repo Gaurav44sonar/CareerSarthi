@@ -338,7 +338,7 @@ import re
 from datetime import datetime
 
 from app.config import settings
-from app.database.mongo import profiles_collection
+from app.database.mongo import profiles_collection, users_collection
 
 genai.configure(api_key=settings.GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.5-flash")
@@ -447,8 +447,15 @@ Return JSON:
 def start_session(user_email: str, user_name: str):
 
     existing_profile = profiles_collection.find_one({"user_email": user_email})
+    user = users_collection.find_one({"email": user_email}, {"_id": 0, "user_name": 1})
+    resolved_name = (user or {}).get("user_name") or user_name or "User"
 
     if existing_profile:
+        if existing_profile.get("user_name") != resolved_name:
+            profiles_collection.update_one(
+                {"user_email": user_email},
+                {"$set": {"user_name": resolved_name}}
+            )
         # If profile is complete, return message
         if existing_profile.get("profile"):
             return {
@@ -462,7 +469,7 @@ def start_session(user_email: str, user_name: str):
 
     profile_doc = {
         "user_email": user_email,
-        "user_name": user_name,
+        "user_name": resolved_name,
         "question_count": 0,
         "answers": {},
         "last_question": "What is your current education level?",

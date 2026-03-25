@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import CreateProfile from "./pages/CreateProfile";
+import Profile from "./pages/Profile";
 import CareerRecommendations from "./pages/CareerRecommendations";
 import SkillGap from "./pages/SkillGap";
 import Roadmap from "./pages/Roadmap";
@@ -21,6 +22,7 @@ function App() {
 
         {/* Dashboard */}
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
 
         {/* AI Flow */}
         <Route path="/create-profile" element={<CreateProfile />} />
