@@ -209,7 +209,7 @@ function Roadmap() {
 
   return (
 
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-10 text-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-0 px-10 pb-10 text-gray-800">
 
       <Navbar />
 

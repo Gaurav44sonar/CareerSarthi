@@ -120,7 +120,7 @@ function CreateProfile() {
 
   return (
 
-    <div className="h-screen flex flex-col items-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-6">
+    <div className="h-screen flex flex-col items-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 pt-0 px-6 pb-6">
 
       <Navbar />
 
